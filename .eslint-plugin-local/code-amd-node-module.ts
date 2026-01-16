@@ -6,8 +6,8 @@
 import * as eslint from 'eslint';
 import type * as ESTree from 'estree';
 import { readFileSync } from 'fs';
-import { join } from 'path';
-
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 export default new class ApiProviderNaming implements eslint.Rule.RuleModule {
 
@@ -23,9 +23,17 @@ export default new class ApiProviderNaming implements eslint.Rule.RuleModule {
 		const modules = new Set<string>();
 
 		try {
-			const packageJson = JSON.parse(readFileSync(join(import.meta.dirname, '../package.json'), 'utf-8'));
-			const { dependencies, optionalDependencies } = packageJson;
+			// Portable replacement for import.meta.dirname
+			const __filename = fileURLToPath(import.meta.url);
+			const __dirname = dirname(__filename);
+
+			const packageJson = JSON.parse(
+				readFileSync(join(__dirname, '../package.json'), 'utf-8')
+			);
+
+			const { dependencies = {}, optionalDependencies = {} } = packageJson;
 			const all = Object.keys(dependencies).concat(Object.keys(optionalDependencies));
+
 			for (const key of all) {
 				modules.add(key);
 			}
@@ -34,7 +42,6 @@ export default new class ApiProviderNaming implements eslint.Rule.RuleModule {
 			console.error(e);
 			throw e;
 		}
-
 
 		const checkImport = (node: ESTree.Literal & { parent?: ESTree.Node & { importKind?: string } }) => {
 
